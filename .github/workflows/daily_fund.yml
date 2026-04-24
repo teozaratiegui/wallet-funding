@@ -20,7 +20,7 @@ jobs:
           ALGOKIT_DISPENSER_ACCESS_TOKEN: ${{ secrets.DISPENSER_TOKEN }}
         run: |
           # Solicitamos 10 ALGOs exactos
-          algokit dispenser fund --receiver 2IMASAZ2TQORG4QGZXINPYNS6NIIBNIXUJEZ7VMH4ZKMR3TCIBOIYSTTEQ --amount 10000000
+          algokit dispenser fund --receiver ${{ secrets.FUNDING_WALLET_ADDRESS }} --amount 10000000
 
       - name: Notify on Failure
         if: steps.funding.outcome == 'failure'
