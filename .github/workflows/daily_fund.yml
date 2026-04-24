@@ -1,0 +1,37 @@
+name: Daily Algo TestNet Funding
+
+on:
+  schedule:
+    # Corre todos los días a las 13:00 UTC (10:00 AM hora Argentina)
+    - cron: "0 13 * * *"
+  workflow_dispatch: # Esto permite ejecutarlo a mano cuando quieras
+
+jobs:
+  fund-wallet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install AlgoKit
+        run: pipx install algokit
+
+      - name: Request Funds
+        id: funding
+        continue-on-error: true
+        env:
+          ALGOKIT_DISPENSER_ACCESS_TOKEN: ${{ secrets.DISPENSER_TOKEN }}
+        run: |
+          # Solicitamos 10 ALGOs exactos
+          algokit dispenser fund --receiver 2IMASAZ2TQORG4QGZXINPYNS6NIIBNIXUJEZ7VMH4ZKMR3TCIBOIYSTTEQ --amount 10000000
+
+      - name: Notify on Failure
+        if: steps.funding.outcome == 'failure'
+        env:
+          TEL_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TEL_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST https://api.telegram.org/bot$TEL_TOKEN/sendMessage \
+          -d chat_id=$TEL_CHAT \
+          -d text="⚠️ ¡Teo! El fondeo falló. Posiblemente el token expiró. Toca renovar: 'algokit dispenser login --ci' 🔪🤡"
+
+      - name: Final Check
+        if: steps.funding.outcome == 'failure'
+        run: exit 1
