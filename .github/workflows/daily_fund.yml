@@ -2,36 +2,32 @@ name: Daily Algo TestNet Funding
 
 on:
   schedule:
-    # Corre todos los días a las 13:00 UTC (10:00 AM hora Argentina)
-    - cron: "0 13 * * *"
-  workflow_dispatch: # Esto permite ejecutarlo a mano cuando quieras
+    - cron: "0 13 * * * bridge" # 10:00 AM Argentina
+  workflow_dispatch:
 
 jobs:
   fund-wallet:
     runs-on: ubuntu-latest
     steps:
-      - name: Install AlgoKit
-        run: pipx install algokit
+      - name: Checkout code
+        uses: actions/checkout@v4 # Necesario para que GitHub vea tu archivo .py
 
-      - name: Request Funds
-        id: funding
-        continue-on-error: true
-        env:
-          ALGOKIT_DISPENSER_ACCESS_TOKEN: ${{ secrets.DISPENSER_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
         run: |
-          # Solicitamos 10 ALGOs exactos
-          algokit dispenser fund --receiver ${{ secrets.FUNDING_WALLET_ADDRESS }} --amount 10000000
+          pip install requests
+          pipx install algokit
 
-      - name: Notify on Failure
-        if: steps.funding.outcome == 'failure'
+      - name: Run Funding Script
         env:
-          TEL_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TEL_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          curl -s -X POST https://api.telegram.org/bot$TEL_TOKEN/sendMessage \
-          -d chat_id=$TEL_CHAT \
-          -d text="⚠️ ¡Teo! El fondeo falló. Posiblemente el token expiró. Toca renovar: 'algokit dispenser login --ci' 🔪🤡"
-
-      - name: Final Check
-        if: steps.funding.outcome == 'failure'
-        run: exit 1
+          # Aquí mapeamos los Secrets a las variables que espera tu script
+          DISPENSER_TOKEN: ${{ secrets.DISPENSER_TOKEN }}
+          FUNDING_WALLET_ADDRESS: ${{ secrets.FUNDING_WALLET_ADDRESS }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FUNDING_AMOUNT: "10000000" # Opcional, ya que tu script tiene el default
+        run: python fund_wallet.py
