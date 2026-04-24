@@ -2,7 +2,8 @@ name: Daily Algo TestNet Funding
 
 on:
   schedule:
-    - cron: "0 13 * * * bridge" # 10:00 AM Argentina
+    # Corre todos los días a las 13:00 UTC (10:00 AM Argentina)
+    - cron: "0 13 * * *"
   workflow_dispatch:
 
 jobs:
