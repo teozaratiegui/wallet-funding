@@ -94,23 +94,14 @@ def run_funding():
 
     out = (result.stdout or "")
     err = (result.stderr or "")
-    # AlgoKit a veces imprime trazas HTTP o errores en stdout; combinar para detectar fallo real
+    # AlgoKit: el subcomando "fund" puede acabar con exit 0 aunque no fondee (p. ej. no autenticado:
+    # hace log ERROR y vuelve sin sys.exit(1)). Solo aceptamos la salida si incluye
+    # "successfully funded" o "browse transaction at" (v. algokit/cli/dispenser.py).
     combined = f"{out}\n{err}".lower()
+    success_markers = ("successfully funded", "browse transaction at")
+    really_funded = any(m in combined for m in success_markers)
 
-    fund_failed = result.returncode != 0
-    if not fund_failed and (
-        "401" in combined
-        or "403" in combined
-        or "forbidden" in combined
-        or "unauthorized" in combined
-        or (
-            '"error"' in combined
-            and ("expired" in combined or "invalid" in combined)
-        )
-    ):
-        fund_failed = True
-
-    if not fund_failed:
+    if result.returncode == 0 and really_funded:
         print("Fondeo exitoso.")
         if out:
             print(out)
@@ -123,7 +114,13 @@ def run_funding():
 
     error_msg = combined
     clip = (err or out)[:2000] or "(sin salida del CLI)"
-    if "401" in error_msg or "403" in error_msg or "expired" in error_msg or "unauthorized" in error_msg:
+    if (
+        "401" in error_msg
+        or "403" in error_msg
+        or "expired" in error_msg
+        or "unauthorized" in error_msg
+        or "please login" in error_msg
+    ):
         send_telegram_alert(
             "Token de AlgoKit inválido o vuelto a caducar. "
             "Renueva con: algokit dispenser login --ci y actualiza el secret DISPENSER_TOKEN."
